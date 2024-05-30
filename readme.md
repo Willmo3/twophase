@@ -39,3 +39,50 @@ However, with two-phase commit, changes can only be committed when the transacti
 And while the central node is a single point of failure, if it goes offline, the worker nodes cannot commit their changes.
 
 Our algorithm isn't foolproof -- a worker node might miss the main node's explicit commit message, for instance. A more detailed exploration of two phase commit would address this.
+
+## The  Model
+
+### Terminology
+In the style of Lamport's lecture series, I opt to use database terminology for two-phase commit.
+
+### Variables
+Variables are named statefully because (like most formal methods) TLA+ treats computation as a state machine to be traversed.
+
+1. tmState:
+In what state is the transaction manager currently? Is it committed? Aborted? 
+2. rmState:
+This is a function mapping resource managers to their current states.
+3. tmPrepared:
+This is the set of resource managers which the transaction manager believes are prepared to commit.
+4. msgs:
+This is the set of all messages that have been sent.
+
+Note that messages are not removed from this set as they are received! Beyond making the model simpler, this has the added benefit of testing for a variety of internet errors, such as messages being errantly recieved multiple times.
+
+### Constants
+1. RMs
+The resource managers employed by this model. Unlike in Lamport's solution, these are not specified in the config file -- rather, they are written into the mode.
+
+### Typing
+#### Message:
+1. A prepared message, which must contain the sending resource manager.
+2. An abort or commit message. For simplicity, these do not contain the sending resource manager.
+
+#### TypeOK:
+1. Each resource manager must have state "working", "prepared", "committed", or "aborted"
+2. All messages must obey the above message type constraint.
+3. The set of resource managers marked as prepared by the transaction manager must be a subset of all the resource managers.
+4. The transaction manager state must be "init", "committed", or "aborted"
+
+### States
+- RM\_sendPrepare: a resource manager declares that it is prepared.
+- TM\_rcvPrepare: the transaction manager receives a prepare message.
+- TM\_sendAbort: the transaction manager emits an abort message and declares its state aborted.
+- RM\_rcvAbort: A resource manager recieves an abort message
+- RM\_silentAbort: A resource manager silently aborts
+- TM\_sendCommit: Once the transaction manager has recieved commit messages from each of the resource managers, it may emit a commit message.
+- RM\_rcvCommit: The resource manager recieves a commit message.
+
+### Invariants
+#### Consistent:
+For each resource manager r1 and r2, r1 and r2 cannot have opposing states from among "committed" and "aborted".
