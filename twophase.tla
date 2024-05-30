@@ -63,7 +63,8 @@ TMrcvPrepare(rm) ==
 \* And the tmstate will be equal to abort.
 \* The resource manager state will be unaffected.
 TMsendAbort(rm) ==
-    /\ tmState = "aborted"
+    /\ tmState \in {"init", "aborted"}
+    /\ tmState' = "aborted"
     /\ msgs' = msgs \cup {[type |-> "abort"]}
     /\ UNCHANGED <<rmState, tmPrepared>>
 
