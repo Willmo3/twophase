@@ -42,7 +42,7 @@ TypeOK ==
 \* When this happens, its rmState will be prepared.
 \* And a message will be appended stating that it is prepared.
 \* The state of the transaction manager, and the ones that the tm sees as prepared, are unaffected.
-RMsendPrepare(rm) == 
+RM_sendPrepare(rm) == 
     /\ rmState[rm] = "working"
     /\ rmState' = [rmState EXCEPT![rm] = "prepared"]
     /\ msgs' = msgs \cup {[type |-> "prepared", theRM |-> rm]}
@@ -52,7 +52,7 @@ RMsendPrepare(rm) ==
 \* When the messages set contains a message from a given resource manager, it should be in tmPrepared.
 \* The tmState should not be affected
 \* The rmState should not be affected, nor should the messages -- receipt of a message ought not change the msgs set.
-TMrcvPrepare(rm) ==
+TM_rcvPrepare(rm) ==
     /\ [type |-> "prepared", theRM |-> rm] \in msgs
     /\ tmState = "init"
     /\ tmPrepared' = tmPrepared \cup {rm}
@@ -62,7 +62,7 @@ TMrcvPrepare(rm) ==
 \* When this happens, a message will be sent stating that its time to abort.
 \* And the tmstate will be equal to abort.
 \* The resource manager state will be unaffected.
-TMsendAbort(rm) ==
+TM_sendAbort(rm) ==
     /\ tmState \in {"init", "aborted"}
     /\ tmState' = "aborted"
     /\ msgs' = msgs \cup {[type |-> "abort"]}
@@ -71,7 +71,7 @@ TMsendAbort(rm) ==
 \* A resource manager can recieve an abort message
 \* Its state must be set to aborted.
 \* The messages field will be unchanged, as will all transaction manager state.
-RMrcvAbort(rm) ==
+RM_rcvAbort(rm) ==
     /\ [type |-> "abort"] \in msgs
     /\ rmState' = [rmState EXCEPT ![rm] = "aborted"]
     /\ UNCHANGED <<tmState, msgs, tmPrepared>>
@@ -79,7 +79,7 @@ RMrcvAbort(rm) ==
 \* A resource manager can spontaneously, and silently, abort
 \* For simplicity, no message will be sent
 \* Remember, the simpler the model, the easier it will be to handle.
-RMabort(rm) ==
+RM_silentAbort(rm) ==
     /\ rmState[rm] = "working"
     /\ rmState' = [rmState EXCEPT ![rm] = "aborted"]
     /\ UNCHANGED <<tmState, msgs, tmPrepared>>
@@ -90,7 +90,7 @@ RMabort(rm) ==
 \* The transaction manager sends a commit message and sets its own state to committed.
 \* The resource manager state is unaffected.
 \* Additionally, since tmPrepared already equals all resource managers, it is unaffected.
-TMCommit(rm) == 
+TM_sendCommit(rm) == 
     /\ tmState = "init"
     /\ tmPrepared = RMs
     /\ tmState' = "committed"
@@ -102,19 +102,19 @@ TMCommit(rm) ==
 \* rmState[rm] is set to committed.
 \* no message is sent, so msgs is unchanged.
 \* transaction manager state remains unaffected.
-RMrcvCommit(rm) ==
+RM_rcvCommit(rm) ==
     /\ [type |-> "commit"] \in msgs
     /\ rmState' = [rmState EXCEPT ![rm] = "committed"]
     /\ UNCHANGED <<tmState, tmPrepared, msgs>>
 
 Next == \E rm \in RMs:
-    \/ RMsendPrepare(rm)
-    \/ RMrcvAbort(rm)
-    \/ RMrcvCommit(rm)
-    \/ RMabort(rm)
-    \/ TMrcvPrepare(rm)
-    \/ TMsendAbort(rm)
-    \/ TMCommit(rm)
+    \/ RM_sendPrepare(rm)
+    \/ RM_rcvAbort(rm)
+    \/ RM_rcvCommit(rm)
+    \/ RM_silentAbort(rm)
+    \/ TM_rcvPrepare(rm)
+    \/ TM_sendAbort(rm)
+    \/ TM_sendCommit(rm)
 
 \* Consistency property: it cannot be the case that one RM is committed while the other is aborted.
 Consistent == \A rm1, rm2 \in RMs : ~(rmState[rm1] = "aborted" /\ rmState[rm2] = "committed")
